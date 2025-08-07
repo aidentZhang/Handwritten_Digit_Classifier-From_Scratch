@@ -3,11 +3,19 @@ import matplotlib.pyplot as plt
 import random
 import time
 import numpy as np
+import keras
+
+#(x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+
+
+
+# neuron numbering starts at 0, layer numbering starts at 0, id starts at 0
 class node:
-        def __init__(self, layer, neuron, value, id, bias):
+        def __init__(self, layer, neuron, value, id, bias, preSigValue):
                 self.layer = layer
                 self.neuron = neuron
                 self.value = value
+                self.preSigValue = preSigValue
                 self.id = id
                 #bias is the bias added onto the connection going to it. First layer has no bias
 
@@ -23,58 +31,58 @@ class connection:
                 self.toId = toId
 
 def sigmoid(x):
-       return 1/(1+ 2.71828**(-x))
-print(sigmoid(2.498671211709183))
+        return 1/(1+ 2.71828**(-x))
+
+def sigmoid_Derivative(x):
+        return sigmoid(x)*(1-sigmoid(x))
+
+def updateGraph():
+        plt.clf()
+        nx.draw(G, pos = pos, font_weight='ultralight')
+        nx.draw_networkx_labels(G, pos, labels, font_color = "yellow", font_size = 10)
+        plt.pause(1)
+
 #LAYERS START FROM ZERO, pass in a list of the first layer of neurons in form [[neuron, [connection, connection]], [neuron...]]
 def forwardPropagate(LayerValues, layer, network, labels):
         if layer == 0:
-            i=0
-            while i < len(LayerValues):
-                    labels[i] = LayerValues[i]
-                    i+=1
-            plt.clf()
-            nx.draw(G, pos = pos, font_weight='ultralight')
+                i=0
+                while i < len(LayerValues):
+                        labels[i] = LayerValues[i]
+                        i+=1
+                #updateGraph()
 
-            nx.draw_networkx_labels(G, pos, labels, font_color = "orange", font_size = 20)
-            plt.pause(5)
 
-    
         if layer == num_layers-1:
-            return LayerValues
+                return LayerValues, network
         temp = []
         i = 0
         for neuron in network[layer+1]:
-               temp.append(neuron[0].bias)
+                temp.append(neuron[0].bias)
         curr = 0
         for neuron in network[layer]:
-            j = 0
-            for connection in neuron[1]: 
-                temp[j]+=connection.weight*LayerValues[curr]
-                j+=1
-            curr+=1
-        i = 0
-        while i < len(temp):
-               temp[i] = sigmoid(temp[i])
-               i+=1
+                j = 0
+                for connection in neuron[1]: 
+                        temp[j]+=connection.weight*LayerValues[curr]
+                        j+=1
+                curr+=1
+        
 
 
         #update graph
         i = 0
         neuronsSoFar = 0
         while i <= layer:
-               neuronsSoFar+=nodesPerLayer[i]
-               i+=1
-        print(neuronsSoFar)
+                neuronsSoFar+=nodesPerLayer[i]
+                i+=1
         i=0
         while i < len(temp):
-                labels[neuronsSoFar+i] = round(temp[i], 2)
-                i+=1
-        print(labels)
-        plt.clf()
-        nx.draw(G, pos = pos, font_weight='ultralight')
+                #CHECK THIS LINE
+                network[layer+1][i][0].value = sigmoid(temp[i])
+                network[layer+1][i][0].preSigValue = temp[i]
 
-        nx.draw_networkx_labels(G, pos, labels, font_color = "orange", font_size = 20)
-        plt.pause(2)
+                labels[neuronsSoFar+i] = round(sigmoid(temp[i]), 2)
+                i+=1
+        #updateGraph()
 
         
 
@@ -83,8 +91,8 @@ def forwardPropagate(LayerValues, layer, network, labels):
 
 
 #INITIALIZE NETWORK STRUCT
-num_layers = 5
-nodesPerLayer = [7, 5, 5, 5, 5]
+num_layers = 3
+nodesPerLayer = [2,2,2]
 
 
 
@@ -102,7 +110,7 @@ while i < num_layers:
         temp = []
         j = 0
         while j < nodesPerLayer[i]:
-                temp.append([node(i, j, 1, ids, 1)])
+                temp.append([node(i, j, 1, ids, 0, 0)])
                 j+=1
                 ids+=1
         network.append(temp)
@@ -133,7 +141,6 @@ for layer in nodesPerLayer:
 
 
 
-#print(network)
 G = nx.complete_multipartite_graph()
 
 connections = []
@@ -143,28 +150,72 @@ while i < num_layers-1:
                 temp = []         
 
                 for next in network[i+1]:
-                        #print("here")
-                        temp.append(connection(random.random()*2, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
+                        temp.append(connection(random.random()*2-1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
                         G.add_edge(curr[0].id, next[0].id)
-                        #print("edge added")
-                #print(temp)
                 network[i][curr[0].neuron].append(temp)
         i+=1
 
 
-#print(network)
 
 plt.ion()
 labels = {}
 
 i = 0
 while i < ids:
-       labels[i] = 0
-       i+=1
+        labels[i] = 0
+        i+=1
 i = 0
 
+#layers start from 0, calculate 
+def find_Gradient(layer, updateList, expected_outcomes):
+        if layer == 0:
+                i = 0
+                while i < len(updateList[0]):
+                        updateList[0][i][0] = 0
+                        i+=1
+                return updateList
+        elif layer == num_layers-1:
+                #calculate gradient for weights first
+                for neuron_Group in network[layer-1]:
+                        #print("sdad")
+                        #print(neuron_Group)
+                        for link in neuron_Group[1]:
 
-print(forwardPropagate([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1], 0, network, labels))
+                                current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
+                                #print(sigmoid_Derivative(current_PreSigVal))
+                                #print("messy")
+                                #print(neuron_Group[0])
+                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = (1.0/nodesPerLayer[layer])*(sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron])*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
+                #calculate gradient for bias
+                for neuron_Group in network[layer]:
+                        current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
+                        updateList[layer][neuron_Group[0].neuron][0] = (1.0/nodesPerLayer[layer])*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+        #Processing for cases in between first and last layer REMEBER THAT EACH NEURON INFLUENCES COST THROUGH MULTIPLE PATHS
+        else:
+                for neuron_Group in network[layer-1]:
+                        for link in neuron_Group[1]:
+                                
+                                current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
+                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = updateList[layer-1][link.fromNeuron][1][link.toNeuron]
+                #calculate gradient for bias
+                for neuron_Group in network[layer]:
+                        current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
+                        updateList[layer][neuron_Group[0].neuron][0] = (1.0/nodesPerLayer[layer])*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+        
+
+                
+        return find_Gradient(layer-1, updateList, expected_outcomes)
+        
+
+
+
+
+
+updateList = network
+#print(updateList)
+answer, network = forwardPropagate([1, 1], 0, network, labels)
+print(find_Gradient(num_layers-1, updateList, [0.5, 0.5]))
+#print(answer)
 
 
 
