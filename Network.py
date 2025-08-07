@@ -39,7 +39,7 @@ def updateGraph():
         plt.clf()
         nx.draw(G, pos = pos, font_weight='ultralight')
         nx.draw_networkx_labels(G, pos, labels, font_color = "yellow", font_size = 10)
-        plt.pause(1)
+        plt.pause(0.2)
 
 #LAYERS START FROM ZERO, pass in a list of the first layer of neurons in form [[neuron, [connection, connection]], [neuron...]]
 def forwardPropagate(LayerValues, layer, network, labels):
@@ -149,7 +149,7 @@ while i < num_layers-1:
                 temp = []         
 
                 for next in network[i+1]:
-                        temp.append(connection(0.1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
+                        temp.append(connection(random.random()*2-1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
                         G.add_edge(curr[0].id, next[0].id)
                 network[i][curr[0].neuron].append(temp)
         i+=1
@@ -188,7 +188,7 @@ def find_Gradient(layer, updateList, expected_outcomes):
                 #calculate gradient for bias
                 for neuron_Group in network[layer]:
                         current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
-                        updateList[layer][neuron_Group[0].neuron][0] = (sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+                        updateList[layer][neuron_Group[0].neuron][0] = 2*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
         #Processing for cases in between first and last layer REMEBER THAT EACH NEURON INFLUENCES COST THROUGH MULTIPLE PATHS
         
         
@@ -198,7 +198,7 @@ def find_Gradient(layer, updateList, expected_outcomes):
                                 delC_delA = 0
                                 i = 0
                                 while i < len(updateList[layer][link.toNeuron][1]):
-                                        delC_delA+=updateList[layer][link.toNeuron][1][i]*(1/(network[layer][link.toNeuron][0].value))*network[layer][link.fromNeuron][1][i]
+                                        delC_delA+=updateList[layer][link.toNeuron][1][i]*(1/(network[layer][link.toNeuron][0].value))*network[layer][link.fromNeuron][1][i].weight
                                         i+=1
                                 delC_delA*=(sigmoid_Derivative(network[layer][link.toNeuron][0].preSigValue)*network[layer-1][link.fromNeuron][0].value)
                                 updateList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
@@ -210,7 +210,7 @@ def find_Gradient(layer, updateList, expected_outcomes):
                         i = 0
                         delC_delA = 0
                         while i < len(network[layer+1]):
-                                delC_delA+=(updateList[layer+1][i][0] * neuron_Group[1][i])
+                                delC_delA+=(updateList[layer+1][i][0] * neuron_Group[1][i].weight)
                                 i+=1
 
                         updateList[layer][neuron_Group[0].neuron][0] = delC_delA
@@ -225,11 +225,12 @@ def updateNetwork(network, updateList):
         while i < len(network):
                 j = 0
                 while j < len(network[i]):
-                        network[i][j][0].bias -= updateList[i][j][0]
-                        k = 0
-                        while k < len(network[i][j][1]):
-                                network[i][j][1][k].weight -= updateList[i][j][1][k]
-                                k+=1
+                        network[i][j][0].bias -= updateList[i][j][0]*0.1
+                        if i != len(network)-1:
+                                k = 0
+                                while k < len(network[i][j][1]):
+                                        network[i][j][1][k].weight -= updateList[i][j][1][k]*0.1
+                                        k+=1
                         j+=1
                 i+=1
         return network
@@ -238,12 +239,15 @@ def updateNetwork(network, updateList):
 import copy
 print(network)
 updateList = copy.deepcopy(network)
-print(network)
-print(copy)
-answer, network = forwardPropagate([1, 1], 0, network, labels)
-gradient= find_Gradient(num_layers-1, updateList, [0.5, 0.5])
-print(network)
-network = updateNetwork(network, gradient)
+target = [0, 1]
+input = [0.2, 1]
+repeats = 0
+while repeats < 10:
+        answer, network = forwardPropagate(input, 0, network, labels)
+        gradient= find_Gradient(num_layers-1, updateList, target)
+
+        network = updateNetwork(network, gradient)
+
 
 
 #print(answer)
