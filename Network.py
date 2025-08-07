@@ -49,7 +49,7 @@ def forwardPropagate(LayerValues, layer, network, labels):
                 while i < len(LayerValues):
                         labels[i] = LayerValues[i]
                         i+=1
-                #updateGraph()
+                updateGraph()
 
 
         if layer == num_layers-1:
@@ -82,7 +82,7 @@ def forwardPropagate(LayerValues, layer, network, labels):
 
                 labels[neuronsSoFar+i] = round(sigmoid(temp[i]), 2)
                 i+=1
-        #updateGraph()
+        updateGraph()
 
         
 
@@ -150,7 +150,7 @@ while i < num_layers-1:
                 temp = []         
 
                 for next in network[i+1]:
-                        temp.append(connection(random.random()*2-1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
+                        temp.append(connection(0, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
                         G.add_edge(curr[0].id, next[0].id)
                 network[i][curr[0].neuron].append(temp)
         i+=1
@@ -185,22 +185,31 @@ def find_Gradient(layer, updateList, expected_outcomes):
                                 #print(sigmoid_Derivative(current_PreSigVal))
                                 #print("messy")
                                 #print(neuron_Group[0])
-                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = (1.0/nodesPerLayer[layer])*(sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron])*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
+                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = (sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron])*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
                 #calculate gradient for bias
                 for neuron_Group in network[layer]:
                         current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
-                        updateList[layer][neuron_Group[0].neuron][0] = (1.0/nodesPerLayer[layer])*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+                        updateList[layer][neuron_Group[0].neuron][0] = (sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
         #Processing for cases in between first and last layer REMEBER THAT EACH NEURON INFLUENCES COST THROUGH MULTIPLE PATHS
+        
+        
         else:
                 for neuron_Group in network[layer-1]:
                         for link in neuron_Group[1]:
-                                
-                                current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
-                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = updateList[layer-1][link.fromNeuron][1][link.toNeuron]
+                                delC_delA = 0
+                                i = 0
+                                while i < len(updateList[layer][link.toNeuron][1]):
+                                        delC_delA+=updateList[layer][link.toNeuron][1][i]*(1/(network[layer][link.toNeuron][0].value))*network[layer][link.fromNeuron][1][i]
+                                        i+=1
+                                delC_delA*=(sigmoid_Derivative(network[layer][link.toNeuron][0].preSigValue)*network[layer-1][link.fromNeuron][0].value)
+                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
+                
                 #calculate gradient for bias
-                for neuron_Group in network[layer]:
-                        current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
-                        updateList[layer][neuron_Group[0].neuron][0] = (1.0/nodesPerLayer[layer])*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+
+
+                # for neuron_Group in network[layer]:
+                #         current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
+                #         updateList[layer][neuron_Group[0].neuron][0] = (sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
         
 
                 
