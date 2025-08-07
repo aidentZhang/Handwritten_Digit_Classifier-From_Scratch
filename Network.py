@@ -2,7 +2,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import random
 import time
-import numpy as np
 import keras
 
 #(x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
@@ -150,7 +149,7 @@ while i < num_layers-1:
                 temp = []         
 
                 for next in network[i+1]:
-                        temp.append(connection(0, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
+                        temp.append(connection(0.1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
                         G.add_edge(curr[0].id, next[0].id)
                 network[i][curr[0].neuron].append(temp)
         i+=1
@@ -207,23 +206,46 @@ def find_Gradient(layer, updateList, expected_outcomes):
                 #calculate gradient for bias
 
 
-                # for neuron_Group in network[layer]:
-                #         current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
-                #         updateList[layer][neuron_Group[0].neuron][0] = (sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+                for neuron_Group in network[layer]:
+                        i = 0
+                        delC_delA = 0
+                        while i < len(network[layer+1]):
+                                delC_delA+=(updateList[layer+1][i][0] * neuron_Group[1][i])
+                                i+=1
+
+                        updateList[layer][neuron_Group[0].neuron][0] = delC_delA
         
 
                 
         return find_Gradient(layer-1, updateList, expected_outcomes)
         
 
+def updateNetwork(network, updateList):
+        i = 0
+        while i < len(network):
+                j = 0
+                while j < len(network[i]):
+                        network[i][j][0].bias -= updateList[i][j][0]
+                        k = 0
+                        while k < len(network[i][j][1]):
+                                network[i][j][1][k].weight -= updateList[i][j][1][k]
+                                k+=1
+                        j+=1
+                i+=1
+        return network
 
 
-
-
-updateList = network
-#print(updateList)
+import copy
+print(network)
+updateList = copy.deepcopy(network)
+print(network)
+print(copy)
 answer, network = forwardPropagate([1, 1], 0, network, labels)
-print(find_Gradient(num_layers-1, updateList, [0.5, 0.5]))
+gradient= find_Gradient(num_layers-1, updateList, [0.5, 0.5])
+print(network)
+network = updateNetwork(network, gradient)
+
+
 #print(answer)
 
 
