@@ -53,6 +53,7 @@ def forwardPropagate(LayerValues, layer, network, labels):
                 i=0
                 while i < len(LayerValues):
                         labels[i] = LayerValues[i]
+                        network[0][i][0].value = LayerValues[i]
                         i+=1
                 n = lowerBound
                 while n <= upperBound:
@@ -153,7 +154,7 @@ def updateNetwork(network, updateList):
 
 #INITIALIZE NETWORK STRUCT
 num_layers = 4
-nodesPerLayer = [784,16,16,10]
+nodesPerLayer = [4,4,4,4]
 network = []
 
 i = 0
@@ -171,8 +172,8 @@ while i < num_layers:
 
 
 #Info for cropping out nodes in first layer due to spacing constraints
-lowerBound = 5
-upperBound = 779
+lowerBound = 0
+upperBound = -1
 #SPACING INFO
 xSpace = float(2)/(ids+2)
 ySpace = float(2)/(16 if max(nodesPerLayer) > 16 else max(nodesPerLayer))
@@ -220,69 +221,56 @@ while i < ids:
         i+=1
 i = 0
 growth_Factor = 0.1
-isUpdate = False
+isUpdate = True
 
 updateList = copy.deepcopy(network)
 plt.ion()
 
 #LOAD DATA
 
-(x_preprocessed, y_preprocessed), (x_test, y_preprocessed) = keras.datasets.mnist.load_data()
-x_preprocessed = x_preprocessed[:1000]
-y_preprocessed = y_preprocessed[:1000]
-x_train = []
-x = 0
-#PROCESS DATA
+# (x_preprocessed, y_preprocessed), (x_test, y_preprocessed) = keras.datasets.mnist.load_data()
+# x_preprocessed = x_preprocessed[:1000]
+# y_preprocessed = y_preprocessed[:1000]
+# x_train = []
+# x = 0
+# #PROCESS DATA
 
-while x < len(x_preprocessed):
-        j = 0
-        temp = []
-        while j < 28:
-                k = 0
-                while k < 28:
-                        temp.append(float(int(x_preprocessed[x][j][k]))/255)
-                        k+=1
-                j+=1
-        x+=1
-        x_train.append(temp)
-y_train = []
-x = 0
-while x < len(y_preprocessed):
-        temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        temp[y_preprocessed[x]] = 1
-        y_train.append(temp)
-        x+=1
+# while x < len(x_preprocessed):
+#         j = 0
+#         temp = []
+#         while j < 28:
+#                 k = 0
+#                 while k < 28:
+#                         temp.append(float(int(x_preprocessed[x][j][k]))/255)
+#                         k+=1
+#                 j+=1
+#         x+=1
+#         x_train.append(temp)
+# y_train = []
+# x = 0
+# while x < len(y_preprocessed):
+#         temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+#         temp[y_preprocessed[x]] = 1
+#         y_train.append(temp)
+#         x+=1
 
-print(len(x_train[0])) 
+# print(len(x_train[0])) 
 
 
 i = lowerBound
-while i <= upperBound:
+while i < upperBound:
         G.remove_node(i)
         i+=1
 
 from tqdm import tqdm
 
-#TRAIN
-totalEpoches = 5
-o = 0
+testingtemp = 0
+while testingtemp < 1:
+        answer, network = forwardPropagate([0.2, 0.3, 0.7, 0.3], 0, network, labels)
+        gradient = find_Gradient(num_layers-1, updateList, [0.5, 0.5, 0.5, 0.5])
+        network = updateNetwork(network, gradient)
 
-while o < totalEpoches:
-        repeats = 0
-        correct = 0
-        with tqdm(total=len(x_train)) as pbar:
 
-                while repeats < len(x_train):
-                        answer, network = forwardPropagate(x_train[repeats], 0, network, labels)
-                        #print("Epoch: "+ str(o)+ " Pass number " + str(repeats) + " Expected: " + str(y_train[repeats].index(max(y_train[repeats])))+", got " + str(answer.index(max(answer))))
-                        if y_train[repeats].index(max(y_train[repeats])) == (answer.index(max(answer))):
-                                correct+=1
-                        gradient = find_Gradient(num_layers-1, updateList, y_train[repeats])
-                        pbar.update(1)
-                        network = updateNetwork(network, gradient)
-                        repeats+=1
-        print("Epoch: "+ str(o) + " done now accuracy = " + str(correct/len(x_train)))
-        o+=1
 
 plt.ioff()
 plt.show()
