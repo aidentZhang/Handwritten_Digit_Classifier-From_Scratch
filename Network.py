@@ -53,7 +53,9 @@ def forwardPropagate(LayerValues, layer, network, labels):
                 i=0
                 while i < len(LayerValues):
                         labels[i] = LayerValues[i]
+                        network[0][i][0].value = LayerValues[i]
                         i+=1
+                        
                 n = lowerBound
                 while n <= upperBound:
                         del labels[n]
@@ -264,17 +266,17 @@ while i <= upperBound:
 from tqdm import tqdm
 
 #TRAIN
-totalEpoches = 5
+totalEpoches = 3
 o = 0
 
 while o < totalEpoches:
         repeats = 0
         correct = 0
         with tqdm(total=len(x_train)) as pbar:
-
                 while repeats < len(x_train):
                         answer, network = forwardPropagate(x_train[repeats], 0, network, labels)
-                        #print("Epoch: "+ str(o)+ " Pass number " + str(repeats) + " Expected: " + str(y_train[repeats].index(max(y_train[repeats])))+", got " + str(answer.index(max(answer))))
+                        if o == 2:
+                                print("Epoch: "+ str(o)+ " Pass number " + str(repeats) + " Expected: " + str(y_train[repeats].index(max(y_train[repeats])))+", got " + str(answer.index(max(answer))))
                         if y_train[repeats].index(max(y_train[repeats])) == (answer.index(max(answer))):
                                 correct+=1
                         gradient = find_Gradient(num_layers-1, updateList, y_train[repeats])
