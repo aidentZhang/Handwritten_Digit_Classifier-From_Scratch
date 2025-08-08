@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import time
 import keras
-
+import copy
 
 
 
@@ -16,7 +16,6 @@ class node:
                 self.preSigValue = preSigValue
                 self.id = id
                 #bias is the bias added onto the connection going to it. First layer has no bias
-
                 self.bias = bias
 
 class connection:
@@ -35,22 +34,28 @@ def sigmoid_Derivative(x):
         return sigmoid(x)*(1-sigmoid(x))
 
 def updateGraph():
-        plt.clf()
-        nx.draw(G, pos = pos, font_weight='ultralight')
-        nx.draw_networkx_labels(G, pos, labels, font_color = "yellow", font_size = 10)
-        plt.pause(0.2)
+        if isUpdate:
+                plt.clf()
+                nx.draw(G, pos = pos, font_weight='ultralight')
+                
+                nx.draw_networkx_labels(G, pos, labels, font_color = "yellow", font_size = 10)
+                
+                plt.pause(0.05)
 
 #LAYERS START FROM ZERO, pass in a list of the first layer of neurons in form [[neuron, [connection, connection]], [neuron...]]
 def forwardPropagate(LayerValues, layer, network, labels):
+        
+
         if layer == 0:
                 i=0
                 while i < len(LayerValues):
-                        if i < 5 or i > 779: 
-                                labels[i] = LayerValues[i]
+                        labels[i] = LayerValues[i]
                         i+=1
+                n = lowerBound
+                while n <= upperBound:
+                        del labels[n]
+                        n+=1
                 updateGraph()
-
-
         if layer == num_layers-1:
                 return LayerValues, network
         temp = []
@@ -64,9 +69,6 @@ def forwardPropagate(LayerValues, layer, network, labels):
                         temp[j]+=connection.weight*LayerValues[curr]
                         j+=1
                 curr+=1
-        
-
-
         #update graph
         i = 0
         neuronsSoFar = 0
@@ -78,95 +80,14 @@ def forwardPropagate(LayerValues, layer, network, labels):
                 #CHECK THIS LINE
                 network[layer+1][i][0].value = sigmoid(temp[i])
                 network[layer+1][i][0].preSigValue = temp[i]
-
-                labels[neuronsSoFar+i] = round(sigmoid(temp[i]), 2)
+                temp[i] = sigmoid(temp[i])
+                labels[neuronsSoFar+i] = round(temp[i], 2)
                 i+=1
         updateGraph()
-
-        
-
-
         return forwardPropagate(temp, layer+1, network, labels)
 
 
-#INITIALIZE NETWORK STRUCT
-num_layers = 4
-nodesPerLayer = [784,16,16,10]
 
-
-
-
-
-
-
-
-network = []
-
-i = 0
-#print("hello")
-ids = 0
-while i < num_layers:
-        temp = []
-        j = 0
-        while j < nodesPerLayer[i]:
-                temp.append([node(i, j, 1, ids, 0, 0)])
-                j+=1
-                ids+=1
-        network.append(temp)
-        i+=1
-i = 0
-
-
-
-
-#SPACING INFO
-xSpace = float(2)/(ids+2)
-ySpace = float(2)/(16 if max(nodesPerLayer) > 16 else max(nodesPerLayer))
-pos = {}
-currX = -1+xSpace
-i = 0
-
-for layer in nodesPerLayer:
-        j = 0
-        currY = -1+ySpace
-
-        while j < layer:
-                pos[i] = (currX, currY)
-                i+=1
-                currY+=ySpace
-                j+=1
-        currX+=xSpace
-
-
-
-
-G = nx.complete_multipartite_graph()
-
-connections = []
-i = 0
-while i < num_layers-1:
-        for curr in network[i]:
-                temp = []         
-
-                for next in network[i+1]:
-                        temp.append(connection(random.random()*2-1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
-                        if curr[0].id >779 or curr[0].id < 5:
-                                G.add_edge(curr[0].id, next[0].id)
-                network[i][curr[0].neuron].append(temp)
-        i+=1
-
-
-
-plt.ion()
-labels = {}
-
-i = 0
-while i < ids:
-        labels[i] = 0
-        i+=1
-i = 0
-
-#layers start from 0, calculate 
 def find_Gradient(layer, updateList, expected_outcomes):
         if layer == 0:
                 i = 0
@@ -191,8 +112,6 @@ def find_Gradient(layer, updateList, expected_outcomes):
                         current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
                         updateList[layer][neuron_Group[0].neuron][0] = 2*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
         #Processing for cases in between first and last layer REMEBER THAT EACH NEURON INFLUENCES COST THROUGH MULTIPLE PATHS
-        
-        
         else:
                 for neuron_Group in network[layer-1]:
                         for link in neuron_Group[1]:
@@ -203,23 +122,15 @@ def find_Gradient(layer, updateList, expected_outcomes):
                                         i+=1
                                 delC_delA*=(sigmoid_Derivative(network[layer][link.toNeuron][0].preSigValue)*network[layer-1][link.fromNeuron][0].value)
                                 updateList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
-                
                 #calculate gradient for bias
-
-
                 for neuron_Group in network[layer]:
                         i = 0
                         delC_delA = 0
                         while i < len(network[layer+1]):
                                 delC_delA+=(updateList[layer+1][i][0] * neuron_Group[1][i].weight)
                                 i+=1
-
                         updateList[layer][neuron_Group[0].neuron][0] = delC_delA
-        
-
-                
         return find_Gradient(layer-1, updateList, expected_outcomes)
-        
 
 def updateNetwork(network, updateList):
         i = 0
@@ -236,24 +147,92 @@ def updateNetwork(network, updateList):
                 i+=1
         return network
 
-growth_Factor = 0.3
-import copy
-#print(network)
+
+
+
+#INITIALIZE NETWORK STRUCT
+num_layers = 4
+nodesPerLayer = [784,16,16,10]
+network = []
+
+i = 0
+ids = 0
+#NODE CREATION
+while i < num_layers:
+        temp = []
+        j = 0
+        while j < nodesPerLayer[i]:
+                temp.append([node(i, j, 1, ids, 0, 0)])
+                j+=1
+                ids+=1
+        network.append(temp)
+        i+=1
+
+
+#Info for cropping out nodes in first layer due to spacing constraints
+lowerBound = 5
+upperBound = 779
+#SPACING INFO
+xSpace = float(2)/(ids+2)
+ySpace = float(2)/(16 if max(nodesPerLayer) > 16 else max(nodesPerLayer))
+pos = {}
+currX = -1+xSpace
+i = 0
+print(ySpace)
+#POSITIONING
+for layer in nodesPerLayer:
+        j = 0
+        currY = -1+ySpace
+
+        while j < layer:
+                if i < lowerBound or i > upperBound:
+                        pos[i] = (currX, currY)
+                        currY+=ySpace
+
+                i+=1
+                j+=1
+        currX+=xSpace
+
+
+
+#ADDING CONNECTIONS
+G = nx.complete_multipartite_graph()
+
+connections = []
+i = 0
+while i < num_layers-1:
+        for curr in network[i]:
+                temp = []         
+
+                for next in network[i+1]:
+                        temp.append(connection(random.random()*2-1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
+                        G.add_edge(curr[0].id, next[0].id)
+                network[i][curr[0].neuron].append(temp)
+        i+=1
+
+
+#labeling and a bit of housekeeping
+labels = {}
+i = 0
+while i < ids:
+        labels[i] = 0
+        i+=1
+i = 0
+growth_Factor = 0.1
+isUpdate = True
+
 updateList = copy.deepcopy(network)
+plt.ion()
 
+#LOAD DATA
 
-
-
-
-
-#print(answer)
-import pdb
 (x_preprocessed, y_preprocessed), (x_test, y_preprocessed) = keras.datasets.mnist.load_data()
-#print(x_train[0])
 x_preprocessed = x_preprocessed[:500]
 y_preprocessed = y_preprocessed[:500]
 x_train = []
 x = 0
+#PROCESS DATA
+
 while x < len(x_preprocessed):
         j = 0
         temp = []
@@ -274,9 +253,18 @@ while x < len(y_preprocessed):
         x+=1
 
 print(len(x_train[0])) 
+
+
+i = lowerBound
+while i <= upperBound:
+        G.remove_node(i)
+        i+=1
+
+#TRAIN
 repeats = 0
 while repeats < 500:
         answer, network = forwardPropagate(x_train[repeats], 0, network, labels)
+        print("Pass number " + str(repeats) + " Expected: " + str(y_train[repeats].index(max(y_train[repeats])))+", got " + str(answer.index(max(answer))))
         gradient= find_Gradient(num_layers-1, updateList, y_train[repeats])
 
         network = updateNetwork(network, gradient)
