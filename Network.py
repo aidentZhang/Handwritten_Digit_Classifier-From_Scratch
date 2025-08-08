@@ -28,7 +28,10 @@ class connection:
                 self.toId = toId
 
 def sigmoid(x):
-        return 1/(1+ 2.71828**(-x))
+        try:
+                return 1/(1+ 2.71828**(-x))
+        except:
+                return 0.01
 
 def sigmoid_Derivative(x):
         return sigmoid(x)*(1-sigmoid(x))
@@ -98,13 +101,11 @@ def find_Gradient(layer, updateList, expected_outcomes):
         elif layer == num_layers-1:
                 #calculate gradient for weights first
                 for neuron_Group in network[layer-1]:
-                        #print("sdad")
                         #print(neuron_Group)
                         for link in neuron_Group[1]:
 
                                 current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
                                 #print(sigmoid_Derivative(current_PreSigVal))
-                                #print("messy")
                                 #print(neuron_Group[0])
                                 updateList[layer-1][link.fromNeuron][1][link.toNeuron] = (sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron])*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
                 #calculate gradient for bias
@@ -219,7 +220,7 @@ while i < ids:
         i+=1
 i = 0
 growth_Factor = 0.1
-isUpdate = True
+isUpdate = False
 
 updateList = copy.deepcopy(network)
 plt.ion()
@@ -227,8 +228,8 @@ plt.ion()
 #LOAD DATA
 
 (x_preprocessed, y_preprocessed), (x_test, y_preprocessed) = keras.datasets.mnist.load_data()
-x_preprocessed = x_preprocessed[:500]
-y_preprocessed = y_preprocessed[:500]
+x_preprocessed = x_preprocessed[:1000]
+y_preprocessed = y_preprocessed[:1000]
 x_train = []
 x = 0
 #PROCESS DATA
@@ -260,15 +261,28 @@ while i <= upperBound:
         G.remove_node(i)
         i+=1
 
-#TRAIN
-repeats = 0
-while repeats < 500:
-        answer, network = forwardPropagate(x_train[repeats], 0, network, labels)
-        print("Pass number " + str(repeats) + " Expected: " + str(y_train[repeats].index(max(y_train[repeats])))+", got " + str(answer.index(max(answer))))
-        gradient= find_Gradient(num_layers-1, updateList, y_train[repeats])
+from tqdm import tqdm
 
-        network = updateNetwork(network, gradient)
-        repeats+=1
+#TRAIN
+totalEpoches = 5
+o = 0
+
+while o < totalEpoches:
+        repeats = 0
+        correct = 0
+        with tqdm(total=len(x_train)) as pbar:
+
+                while repeats < len(x_train):
+                        answer, network = forwardPropagate(x_train[repeats], 0, network, labels)
+                        #print("Epoch: "+ str(o)+ " Pass number " + str(repeats) + " Expected: " + str(y_train[repeats].index(max(y_train[repeats])))+", got " + str(answer.index(max(answer))))
+                        if y_train[repeats].index(max(y_train[repeats])) == (answer.index(max(answer))):
+                                correct+=1
+                        gradient = find_Gradient(num_layers-1, updateList, y_train[repeats])
+                        pbar.update(1)
+                        network = updateNetwork(network, gradient)
+                        repeats+=1
+        print("Epoch: "+ str(o) + " done now accuracy = " + str(correct/len(x_train)))
+        o+=1
 
 plt.ioff()
 plt.show()
