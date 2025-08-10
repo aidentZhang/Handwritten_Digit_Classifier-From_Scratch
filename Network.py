@@ -6,7 +6,6 @@ import keras
 import copy
 
 
-
 # neuron numbering starts at 0, layer numbering starts at 0, id starts at 0
 class node:
         def __init__(self, layer, neuron, value, id, bias, preSigValue):
