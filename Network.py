@@ -2,6 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import random
 import time
+import numpy as np
 import keras
 import copy
 
@@ -26,11 +27,43 @@ class connection:
                 self.fromId = fromId
                 self.toId = toId
 
+def addTwo(l1, l2):
+        first = 0
+        while first<len(l1):
+                second = 0
+                while second<len(l1[first]):
+                        l1[first][second][0] += l2[first][second][0]
+                        if len(l1[first][second])>1:
+                                third = 0
+                                while third<len(l1[first][second][1]):
+                                        l1[first][second][1][third] += l2[first][second][1][third]
+                                        third+=1
+                        second+=1
+                first+=1
+        return l1
+
+def networkListDiv(l1, x):
+        first = 0
+        while first<len(l1):
+                second = 0
+                while second<len(l1[first]):
+                        l1[first][second][0] = l1[first][second][0]/x
+                        if len(l1[first][second])>1:
+                                third = 0
+                                while third<len(l1[first][second][1]):
+                                        l1[first][second][1][third] = l1[first][second][1][third]/x
+                                        third+=1
+                        second+=1
+                first+=1
+        return l1
+
+
 def sigmoid(x):
         try:
                 return 1/(1+ 2.71828**(-x))
         except:
-                return 0.01
+                print("poo")
+                z = input()
 
 def sigmoid_Derivative(x):
         return sigmoid(x)*(1-sigmoid(x))
@@ -153,8 +186,8 @@ def updateNetwork(network, updateList):
 
 
 #INITIALIZE NETWORK STRUCT
-num_layers = 4
-nodesPerLayer = [784,16,16,10]
+num_layers = 3
+nodesPerLayer = [4, 4, 2]
 network = []
 
 i = 0
@@ -164,7 +197,7 @@ while i < num_layers:
         temp = []
         j = 0
         while j < nodesPerLayer[i]:
-                temp.append([node(i, j, 1, ids, 0, 0)])
+                temp.append([node(i, j, 0, ids, 0, 0)])
                 j+=1
                 ids+=1
         network.append(temp)
@@ -172,8 +205,8 @@ while i < num_layers:
 
 
 #Info for cropping out nodes in first layer due to spacing constraints
-lowerBound = 5
-upperBound = 779
+lowerBound = 0
+upperBound = -1
 #SPACING INFO
 xSpace = float(2)/(ids+2)
 ySpace = float(2)/(16 if max(nodesPerLayer) > 16 else max(nodesPerLayer))
@@ -207,7 +240,7 @@ while i < num_layers-1:
                 temp = []         
 
                 for next in network[i+1]:
-                        temp.append(connection(random.random()*2-1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
+                        temp.append(connection(random.random()*2 - 1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
                         G.add_edge(curr[0].id, next[0].id)
                 network[i][curr[0].neuron].append(temp)
         i+=1
@@ -220,45 +253,45 @@ while i < ids:
         labels[i] = 0
         i+=1
 i = 0
-growth_Factor = 0.1
-isUpdate = False
+growth_Factor = 0.5
+isUpdate = True
 
 updateList = copy.deepcopy(network)
 plt.ion()
 
 #LOAD DATA
 
-(x_preprocessed, y_preprocessed), (x_test, y_preprocessed) = keras.datasets.mnist.load_data()
-x_preprocessed = x_preprocessed[:1000]
-y_preprocessed = y_preprocessed[:1000]
-x_train = []
-x = 0
-#PROCESS DATA
+# (x_preprocessed, y_preprocessed), (x_test, y_preprocessed) = keras.datasets.mnist.load_data()
+# x_preprocessed = x_preprocessed[:1000]
+# y_preprocessed = y_preprocessed[:1000]
+# x_train = []
+# x = 0
+# #PROCESS DATA
 
-while x < len(x_preprocessed):
-        j = 0
-        temp = []
-        while j < 28:
-                k = 0
-                while k < 28:
-                        temp.append(float(int(x_preprocessed[x][j][k]))/255)
-                        k+=1
-                j+=1
-        x+=1
-        x_train.append(temp)
-y_train = []
-x = 0
-while x < len(y_preprocessed):
-        temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        temp[y_preprocessed[x]] = 1
-        y_train.append(temp)
-        x+=1
+# while x < len(x_preprocessed):
+#         j = 0
+#         temp = []
+#         while j < 28:
+#                 k = 0
+#                 while k < 28:
+#                         temp.append(float(int(x_preprocessed[x][j][k]))/255)
+#                         k+=1
+#                 j+=1
+#         x+=1
+#         x_train.append(temp)
+# y_train = []
+# x = 0
+# while x < len(y_preprocessed):
+#         temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+#         temp[y_preprocessed[x]] = 1
+#         y_train.append(temp)
+#         x+=1
 
-print(len(x_train[0])) 
+# print(len(x_train[0])) 
 
 
 i = lowerBound
-while i <= upperBound:
+while i < upperBound:
         G.remove_node(i)
         i+=1
 
@@ -284,6 +317,31 @@ while o < totalEpoches:
                         repeats+=1
         print("Epoch: "+ str(o) + " done now accuracy = " + str(correct/len(x_train)))
         o+=1
+x_train = [[0,0,1,1],[0,1,0,1],[1,1,0,0],[1,0,1,0]]
+y_train = [[1,0], [0,1], [1,0], [0,1]]
+
+
+
+
+                
+testingtemp = 0
+while True:
+        y = 0
+        answer, network = forwardPropagate(x_train[y], 0, network, labels)
+        average = find_Gradient(num_layers-1, updateList, y_train[y])
+        y+=1
+        while y < 2:
+                answer, network = forwardPropagate(x_train[y], 0, network, labels)
+                temp = find_Gradient(num_layers-1, updateList, y_train[y])
+                average = addTwo(average, temp)
+                print(answer)
+                print(y_train[testingtemp%4])
+                y+=1
+        average = networkListDiv(average, 2)
+        network = updateNetwork(network, average)
+        testingtemp+=1
+
+
 
 plt.ioff()
 plt.show()
