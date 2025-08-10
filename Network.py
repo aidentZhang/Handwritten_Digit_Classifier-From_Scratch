@@ -60,7 +60,7 @@ def networkListDiv(l1, x):
                 first+=1
         return l1
 
-
+#is actually a relu
 def sigmoid(x):
         try:
                 return 1/(1+ 2.71828**(-x))
@@ -88,7 +88,6 @@ def forwardPropagate(LayerValues, layer, network, labels):
                 i=0
                 while i < len(LayerValues):
                         labels[i] = LayerValues[i]
-                        print(i)
                         network[0][i][0].value = LayerValues[i]
                         i+=1
                         
@@ -141,14 +140,14 @@ def find_Gradient(layer, updateList, expected_outcomes):
                 for neuron_Group in network[layer-1]:
                         #print(neuron_Group)
                         for link in neuron_Group[1]:
-
                                 current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
                                 #print(sigmoid_Derivative(current_PreSigVal))
                                 #print(neuron_Group[0])
-                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = (sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron])*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
+                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
                 #calculate gradient for bias
                 for neuron_Group in network[layer]:
-                        current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
+#MADE CHANGE HERE
+                        current_PreSigVal = neuron_Group[0].preSigValue
                         updateList[layer][neuron_Group[0].neuron][0] = 2*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
         #Processing for cases in between first and last layer REMEBER THAT EACH NEURON INFLUENCES COST THROUGH MULTIPLE PATHS
         else:
@@ -190,8 +189,8 @@ def updateNetwork(network, updateList):
 
 
 #INITIALIZE NETWORK STRUCT
-num_layers = 2
-nodesPerLayer = [2, 2]
+num_layers = 4
+nodesPerLayer = [4, 4, 4, 4]
 network = []
 
 i = 0
@@ -217,7 +216,6 @@ ySpace = float(2)/(16 if max(nodesPerLayer) > 16 else max(nodesPerLayer))
 pos = {}
 currX = -1+xSpace
 i = 0
-print(ySpace)
 #POSITIONING
 for layer in nodesPerLayer:
         j = 0
@@ -257,7 +255,7 @@ while i < ids:
         labels[i] = 0
         i+=1
 i = 0
-growth_Factor = 2
+growth_Factor = 0.1                
 isUpdate = True
 
 updateList = copy.deepcopy(network)
@@ -265,84 +263,108 @@ plt.ion()
 
 #LOAD DATA
 
-(x_preprocessed, y_preprocessed), (x_test, y_preprocessed) = keras.datasets.mnist.load_data()
-x_preprocessed = x_preprocessed[:10000]
-y_preprocessed = y_preprocessed[:10000]
-x_train = []
-x = 0
-#PROCESS DATA
+d = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+a = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
 
-while x < len(x_preprocessed):
-        j = 0
-        temp = []
-        while j < 28:
-                k = 0
-                while k < 28:
-                        temp.append(float(int(x_preprocessed[x][j][k]))/255)
-                        k+=1
-                j+=1
-        x+=1
-        x_train.append(temp)
-y_train = []
-x = 0
-while x < len(y_preprocessed):
-        temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        temp[y_preprocessed[x]] = 1
-        y_train.append(temp)
-        x+=1
+k = 0
+while k<200:
+        print("Sss")
+        answer, network = forwardPropagate(d[k%4], 0, network, labels)
+        average = find_Gradient(num_layers-1, updateList, a[k%4])
+        network = updateNetwork(network, average)
+        k+=1
+
+        answer, network = forwardPropagate(d[0], 0, network, labels)
 
 
-i = lowerBound
-while i <= upperBound:
-        G.remove_node(i)
-        i+=1
+# (x_preprocessed, y_preprocessed), (x_test_preprocessed, y_test_preprocessed) = keras.datasets.mnist.load_data()
+# x_preprocessed = x_preprocessed[:1000]
+# y_preprocessed = y_preprocessed[:1000]
+# x_train = []
+# x = 0
+# #PROCESS DATA
 
-from tqdm import tqdm
+# while x < len(x_preprocessed):
+#         j = 0
+#         temp = []
+#         while j < 28:
+#                 k = 0
+#                 while k < 28:
+#                         temp.append(float(int(x_preprocessed[x][j][k]))/255)
+#                         k+=1
+#                 j+=1
+#         x+=1
+#         x_train.append(temp)
+# y_train = []
+# l = 0
+# while l < len(y_preprocessed):
+#         temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+#         temp[y_preprocessed[l]] = 1
+#         y_train.append(temp)
+#         l+=1
 
-#TRAIN
-totalEpoches = 5
-o = 0
+
+# i = lowerBound
+# while i <= upperBound:
+#         G.remove_node(i)
+#         i+=1
+
+# from tqdm import tqdm
+
+# #TRAIN
+# totalEpoches = 5
 
 
 
-answer, network = forwardPropagate([0.3,0.2], 0, network, labels)
-gradient = find_Gradient(num_layers-1, updateList, [0.2,1])
-print(gradient)
+# o = 0
 
-for i in network:
-        for j in i:
-                print(j[0].bias)
-                try:
-                        for z in j[1]:
-                                print(z.weight, end="")
-                except:
-                        continue
+# # while True:
+# #         answer, network = forwardPropagate(x_train[0], 0, network, labels)
+# #         average = find_Gradient(num_layers-1, updateList, y_train[0])
+# #         network = updateNetwork(network, average)
 
-# while o < totalEpoches:
-#         repeats = 0
-#         correct = 0
-#         with tqdm(total=len(x_train)) as pbar:
-#                 while repeats < len(x_train):
-#                         answer, network = forwardPropagate(x_train[repeats], 0, network, labels)
-#                         if o == 2:
-#                                 print("Epoch: "+ str(o)+ " Pass number " + str(repeats) + " Expected: " + str(y_train[repeats].index(max(y_train[repeats])))+", got " + str(answer.index(max(answer))))
-#                         if y_train[repeats].index(max(y_train[repeats])) == (answer.index(max(answer))):
-#                                 correct+=1
-#                         gradient = find_Gradient(num_layers-1, updateList, y_train[repeats])
-#                         pbar.update(1)
-#                         network = updateNetwork(network, gradient)
-#                         repeats+=1
-#         print("Epoch: "+ str(o) + " done now accuracy = " + str(correct/len(x_train)))
-#         o+=1
-# x_train = [[0,0,1,1],[0,1,0,1],[1,1,0,0],[1,0,1,0]]
-# y_train = [[1,0], [0,1], [1,0], [0,1]]
 
+
+# # for i in network:
+# #         for j in i:
+# #                 print(j[0].bias)
+# #                 try:
+# #                         for z in j[1]:
+# #                                 print(z.weight, end="")
+# #                 except:
+# #                         continue
+
+# # while o < totalEpoches:
+# #         repeats = 0
+# #         correct = 0
+# #         with tqdm(total=len(x_train)) as pbar:
+# #                 while repeats < len(x_train):
+# #                         answer, network = forwardPropagate(x_train[repeats], 0, network, labels)
+# #                         if o == 2:
+# #                                 print("Epoch: "+ str(o)+ " Pass number " + str(repeats) + " Expected: " + str(y_train[repeats].index(max(y_train[repeats])))+", got " + str(answer.index(max(answer))))
+# #                         if y_train[repeats].index(max(y_train[repeats])) == (answer.index(max(answer))):
+# #                                 correct+=1
+# #                         gradient = find_Gradient(num_layers-1, updateList, y_train[repeats])
+# #                         pbar.update(1)
+# #                         network = updateNetwork(network, gradient)
+# #                         repeats+=1
+# #         print("Epoch: "+ str(o) + " done now accuracy = " + str(correct/len(x_train)))
+# #         o+=1
+# # x_train = [[0,0,1,1],[0,1,0,1],[1,1,0,0],[1,0,1,0]]
+# # y_train = [[1,0], [0,1], [1,0], [0,1]]
+
+# def find_Loss(answer, target):
+#         x = 0.0
+#         z = 0
+#         while z < len(answer):
+#                 x+= (answer[z]-target[z])**(2)
+#                 z+=1
+#         return x
 
 
 # batch_Size = 64
                 
 # testingtemp = 0
-
 
 # while o < totalEpoches:
 #         curr = 0
@@ -351,8 +373,10 @@ for i in network:
 #                 while curr< len(x_train):
 #                         left = batch_Size if (len(x_train)-curr)/batch_Size >= 1.0 else len(x_train)%batch_Size
 #                         y = 0
+#                         loss = 0
 #                         answer, network = forwardPropagate(x_train[curr], 0, network, labels)
 #                         average = find_Gradient(num_layers-1, updateList, y_train[curr])
+#                         loss += find_Loss(answer, y_train[curr])
 #                         curr+=1
 #                         y+=1
 #                         while y < left-1:    #Batch size of 64
@@ -363,10 +387,14 @@ for i in network:
 #                                         input()
 #                                 temp = find_Gradient(num_layers-1, updateList, y_train[curr])
 #                                 average = addTwo(average, temp)
+#                                 loss += find_Loss(answer, y_train[curr])
+
 #                                 y+=1
 #                                 curr+=1
 #                                 pbar.update(1)
-
+                                
+#                         loss/=batch_Size
+#                         print(f"Loss = {loss}")
 #                         average = networkListDiv(average, batch_Size)
 #                         network = updateNetwork(network, average)
 #                         curr+=1
@@ -377,7 +405,7 @@ for i in network:
 #                 answer, network = forwardPropagate(x_train[i], 0, network, labels)
 #                 print(f"expected {y_train[i]} got {answer}")
 #                 i+=1
-
+#         growth_Factor * (o/(o+1))
                 
 #         print("Epoch done")
 #         o+=1
