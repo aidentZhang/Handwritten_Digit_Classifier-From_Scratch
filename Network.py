@@ -5,7 +5,7 @@ import time
 import numpy as np
 import keras
 import copy
-
+import math
 
 # neuron numbering starts at 0, layer numbering starts at 0, id starts at 0
 class node:
@@ -60,10 +60,14 @@ def networkListDiv(l1, x):
                 first+=1
         return l1
 
-#is actually a relu
+def tanh(x):
+        return 2*sigmoid(2*x)-1
+
+def tanh_derivative(x):
+        return 1-tanh(x)**2
 def sigmoid(x):
         try:
-                return 1/(1+ 2.71828**(-x))
+                return 1/(1+ math.exp(-x))
         except:
                 print("poo")
                 z = input()
@@ -118,9 +122,9 @@ def forwardPropagate(LayerValues, layer, network, labels):
         i=0
         while i < len(temp):
                 #CHECK THIS LINE
-                network[layer+1][i][0].value = sigmoid(temp[i])
+                network[layer+1][i][0].value = tanh(temp[i]) if layer != num_layers - 2 else sigmoid(temp[i])
                 network[layer+1][i][0].preSigValue = temp[i]
-                temp[i] = sigmoid(temp[i])
+                temp[i] = tanh(temp[i]) if layer != num_layers - 2 else sigmoid(temp[i])
                 labels[neuronsSoFar+i] = round(temp[i], 2)
                 i+=1
         updateGraph()
@@ -138,17 +142,20 @@ def find_Gradient(layer, updateList, expected_outcomes):
         elif layer == num_layers-1:
                 #calculate gradient for weights first
                 for neuron_Group in network[layer-1]:
-                        #print(neuron_Group)
                         for link in neuron_Group[1]:
                                 current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
-                                #print(sigmoid_Derivative(current_PreSigVal))
-                                #print(neuron_Group[0])
-                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
+        #CHANING THIS TO CROSS ENTROPY DERIVATIVE
+                                #updateList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
+#NEW LINE
+                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))*neuron_Group[0].value
                 #calculate gradient for bias
                 for neuron_Group in network[layer]:
 #MADE CHANGE HERE
                         current_PreSigVal = neuron_Group[0].preSigValue
-                        updateList[layer][neuron_Group[0].neuron][0] = 2*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+                        updateList[layer][neuron_Group[0].neuron][0] = (sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+
+                        #bottom line is the MSE loss derivative thing
+                        #updateList[layer][neuron_Group[0].neuron][0] = 2*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])*sigmoid_Derivative(current_PreSigVal)
         #Processing for cases in between first and last layer REMEBER THAT EACH NEURON INFLUENCES COST THROUGH MULTIPLE PATHS
         else:
                 for neuron_Group in network[layer-1]:
@@ -156,9 +163,11 @@ def find_Gradient(layer, updateList, expected_outcomes):
                                 delC_delA = 0
                                 i = 0
                                 while i < len(updateList[layer][link.toNeuron][1]):
+                                        #delC_delA+=updateList[layer][link.toNeuron][1][i]*network[layer][link.toNeuron][1][i].weight
+#rolled back
                                         delC_delA+=updateList[layer][link.toNeuron][1][i]*(1/(network[layer][link.toNeuron][0].value))*network[layer][link.toNeuron][1][i].weight
                                         i+=1
-                                delC_delA*=(sigmoid_Derivative(network[layer][link.toNeuron][0].preSigValue)*network[layer-1][link.fromNeuron][0].value)
+                                delC_delA*=(tanh_derivative(network[layer][link.toNeuron][0].preSigValue)*network[layer-1][link.fromNeuron][0].value)
                                 updateList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
                 #calculate gradient for bias
                 for neuron_Group in network[layer]:
@@ -190,7 +199,7 @@ def updateNetwork(network, updateList):
 
 #INITIALIZE NETWORK STRUCT
 num_layers = 4
-nodesPerLayer = [4, 4, 4, 4]
+nodesPerLayer = [784, 24, 24, 10]
 network = []
 
 i = 0
@@ -208,8 +217,8 @@ while i < num_layers:
 
 
 #Info for cropping out nodes in first layer due to spacing constraints
-lowerBound = 0
-upperBound = -1
+lowerBound = 5
+upperBound = 779
 #SPACING INFO
 xSpace = float(2)/(ids+2)
 ySpace = float(2)/(16 if max(nodesPerLayer) > 16 else max(nodesPerLayer))
@@ -255,76 +264,100 @@ while i < ids:
         labels[i] = 0
         i+=1
 i = 0
-growth_Factor = 0.1                
-isUpdate = True
+growth_Factor = 2           
+isUpdate = False
 
 updateList = copy.deepcopy(network)
 plt.ion()
 
-#LOAD DATA
+# LOAD DATA
 
-d = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
-a = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+# d = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
+# a = [[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]]
 
-k = 0
-while k<200:
-        print("Sss")
-        answer, network = forwardPropagate(d[k%4], 0, network, labels)
-        average = find_Gradient(num_layers-1, updateList, a[k%4])
-        network = updateNetwork(network, average)
-        k+=1
+# k = 0
+# while k<200:
+#         print("Sss")
+#         answer, network = forwardPropagate(d[k%4], 0, network, labels)
+#         average = find_Gradient(num_layers-1, updateList, a[k%4])
+#         network = updateNetwork(network, average)
+#         k+=1
 
-        answer, network = forwardPropagate(d[0], 0, network, labels)
-
-
-# (x_preprocessed, y_preprocessed), (x_test_preprocessed, y_test_preprocessed) = keras.datasets.mnist.load_data()
-# x_preprocessed = x_preprocessed[:1000]
-# y_preprocessed = y_preprocessed[:1000]
-# x_train = []
-# x = 0
-# #PROCESS DATA
-
-# while x < len(x_preprocessed):
-#         j = 0
-#         temp = []
-#         while j < 28:
-#                 k = 0
-#                 while k < 28:
-#                         temp.append(float(int(x_preprocessed[x][j][k]))/255)
-#                         k+=1
-#                 j+=1
-#         x+=1
-#         x_train.append(temp)
-# y_train = []
-# l = 0
-# while l < len(y_preprocessed):
-#         temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-#         temp[y_preprocessed[l]] = 1
-#         y_train.append(temp)
-#         l+=1
+#         answer, network = forwardPropagate(d[0], 0, network, labels)
 
 
-# i = lowerBound
-# while i <= upperBound:
-#         G.remove_node(i)
-#         i+=1
+(x_preprocessed, y_preprocessed), (x_test_preprocessed, y_test_preprocessed) = keras.datasets.mnist.load_data()
+x_preprocessed = x_preprocessed[:5000]
+y_preprocessed = y_preprocessed[:5000]
+x_train = []
+x = 0
+#PROCESS DATA
 
-# from tqdm import tqdm
+while x < len(x_preprocessed):
+        j = 0
+        temp = []
+        while j < 28:
+                k = 0
+                while k < 28:
+                        temp.append(float(int(x_preprocessed[x][j][k]))/255)
+                        k+=1
+                j+=1
+        x+=1
+        x_train.append(temp)
+y_train = []
+l = 0
+while l < len(y_preprocessed):
+        temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        temp[y_preprocessed[l]] = 1
+        y_train.append(temp)
+        l+=1
 
-# #TRAIN
-# totalEpoches = 5
+x=0
+#Test data processing
+x_test = []
+while x < len(x_test_preprocessed):
+        j = 0
+        temp = []
+        while j < 28:
+                k = 0
+                while k < 28:
+                        temp.append(float(int(x_test_preprocessed[x][j][k]))/255)
+                        k+=1
+                j+=1
+        x+=1
+        x_test.append(temp)
+y_test = []
+l = 0
+while l < len(y_test_preprocessed):
+        temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        temp[y_test_preprocessed[l]] = 1
+        y_test.append(temp)
+        l+=1
 
 
 
-# o = 0
 
-# # while True:
-# #         answer, network = forwardPropagate(x_train[0], 0, network, labels)
-# #         average = find_Gradient(num_layers-1, updateList, y_train[0])
-# #         network = updateNetwork(network, average)
+i = lowerBound
+while i <= upperBound:
+        G.remove_node(i)
+        i+=1
+
+from tqdm import tqdm
+
+#TRAIN
+totalEpoches = 5
 
 
 
+o = 0
+
+# while True:
+#         answer, network = forwardPropagate(x_train[0], 0, network, labels)
+#         average = find_Gradient(num_layers-1, updateList, y_train[0])
+#         network = updateNetwork(network, average)
+
+
+#Testing
 # # for i in network:
 # #         for j in i:
 # #                 print(j[0].bias)
@@ -353,62 +386,77 @@ while k<200:
 # # x_train = [[0,0,1,1],[0,1,0,1],[1,1,0,0],[1,0,1,0]]
 # # y_train = [[1,0], [0,1], [1,0], [0,1]]
 
-# def find_Loss(answer, target):
-#         x = 0.0
-#         z = 0
-#         while z < len(answer):
-#                 x+= (answer[z]-target[z])**(2)
-#                 z+=1
-#         return x
+def find_Loss(answer, target):
+        x = 0.0
+        z = 0
+        while z < len(answer):
+                x+= ((answer[z]-target[z])**(2))
+                z+=1
+        return x
 
 
-# batch_Size = 64
+
+batch_Size = 50
                 
-# testingtemp = 0
+testingtemp = 0
 
-# while o < totalEpoches:
-#         curr = 0
-#         with tqdm(total=len(x_train)) as pbar:
+while o < totalEpoches:
+        curr = 0
+        with tqdm(total=len(x_train)) as pbar:
+                while curr< len(x_train):
+                        left = batch_Size if (len(x_train)-curr)/batch_Size >= 1.0 else len(x_train)%batch_Size
+                        y = 0
+                        loss = 0
+                        answer, network = forwardPropagate(x_train[curr], 0, network, labels)
+                        average = find_Gradient(num_layers-1, updateList, y_train[curr])
+                        loss += find_Loss(answer, y_train[curr])
+                        curr+=1
+                        y+=1
+                        while y < left:    #Batch size of 64
+                                try:
+                                        answer, network = forwardPropagate(x_train[curr], 0, network, labels)
+                                except:
+                                        print(f"{curr}.  {left}.   {y}")
+                                        input()
+                                temp = find_Gradient(num_layers-1, updateList, y_train[curr])
+                                average = addTwo(average, temp)
+                                loss += find_Loss(answer, y_train[curr])
 
-#                 while curr< len(x_train):
-#                         left = batch_Size if (len(x_train)-curr)/batch_Size >= 1.0 else len(x_train)%batch_Size
-#                         y = 0
-#                         loss = 0
-#                         answer, network = forwardPropagate(x_train[curr], 0, network, labels)
-#                         average = find_Gradient(num_layers-1, updateList, y_train[curr])
-#                         loss += find_Loss(answer, y_train[curr])
-#                         curr+=1
-#                         y+=1
-#                         while y < left-1:    #Batch size of 64
-#                                 try:
-#                                         answer, network = forwardPropagate(x_train[curr], 0, network, labels)
-#                                 except:
-#                                         print(f"{curr}.  {left}.   {y}")
-#                                         input()
-#                                 temp = find_Gradient(num_layers-1, updateList, y_train[curr])
-#                                 average = addTwo(average, temp)
-#                                 loss += find_Loss(answer, y_train[curr])
-
-#                                 y+=1
-#                                 curr+=1
-#                                 pbar.update(1)
+                                y+=1
+                                curr+=1
+                                pbar.update(1)
                                 
-#                         loss/=batch_Size
-#                         print(f"Loss = {loss}")
-#                         average = networkListDiv(average, batch_Size)
-#                         network = updateNetwork(network, average)
-#                         curr+=1
-        
-#         i = 0
-
-#         while i < 10:
-#                 answer, network = forwardPropagate(x_train[i], 0, network, labels)
-#                 print(f"expected {y_train[i]} got {answer}")
-#                 i+=1
-#         growth_Factor * (o/(o+1))
+                        loss/=batch_Size
+                        print(f"Loss = {loss}")
+                        average = networkListDiv(average, batch_Size)
+                        network = updateNetwork(network, average)        
+        i = 0
+        correct = 0
+        while i < 100:
+                answer, network = forwardPropagate(x_train[i], 0, network, labels)
+                print(f"expected {y_train[i]} got {answer}")
+                if y_train[i].index(1) == answer.index(max(answer)):
+                        print("correct!")
+                        correct+=1
+                i+=1
+                #Growth factor shrinking
+        print(f"Correct proportion is {correct/100}")
+        #growth_Factor * (o/(o+1))
                 
-#         print("Epoch done")
-#         o+=1
+        print("Epoch done")
+        o+=1
+
+
+i = 0
+correct = 0
+while i < len(x_test):
+        answer, network = forwardPropagate(x_test[i], 0, network, labels)
+        print(f"expected {y_test[i]} got {answer}")
+        if y_test[i].index(1) == answer.index(max(answer)):
+                correct+=1
+        i+=1
+print(correct/len(x_test))
+
 
 plt.ioff()
 plt.show()
