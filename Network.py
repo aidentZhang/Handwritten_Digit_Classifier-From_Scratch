@@ -61,7 +61,7 @@ def networkListDiv(l1, x):
         return l1
 
 def tanh(x):
-        return 2*sigmoid(2*x)-1
+        return math.tanh(x)
 
 def tanh_derivative(x):
         return 1-tanh(x)**2
@@ -69,7 +69,7 @@ def sigmoid(x):
         try:
                 return 1/(1+ math.exp(-x))
         except:
-                print("poo")
+                print(x)
                 z = input()
 
 def sigmoid_Derivative(x):
@@ -144,9 +144,8 @@ def find_Gradient(layer, updateList, expected_outcomes):
                 for neuron_Group in network[layer-1]:
                         for link in neuron_Group[1]:
                                 current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
-        #CHANING THIS TO CROSS ENTROPY DERIVATIVE
-                                #updateList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))*2*sigmoid_Derivative(current_PreSigVal)*neuron_Group[0].value
-#NEW LINE
+        #CROSS ENTROPY DERIVATIVE
+                                errorList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))
                                 updateList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))*neuron_Group[0].value
                 #calculate gradient for bias
                 for neuron_Group in network[layer]:
@@ -164,10 +163,12 @@ def find_Gradient(layer, updateList, expected_outcomes):
                                 i = 0
                                 while i < len(updateList[layer][link.toNeuron][1]):
                                         #delC_delA+=updateList[layer][link.toNeuron][1][i]*network[layer][link.toNeuron][1][i].weight
-#rolled back
-                                        delC_delA+=updateList[layer][link.toNeuron][1][i]*(1/(network[layer][link.toNeuron][0].value))*network[layer][link.toNeuron][1][i].weight
+#rolled back                            
+                                        delC_delA+=errorList[layer][link.toNeuron][1][i]*network[layer][link.toNeuron][1][i].weight
                                         i+=1
-                                delC_delA*=(tanh_derivative(network[layer][link.toNeuron][0].preSigValue)*network[layer-1][link.fromNeuron][0].value)
+                                delC_delA*=(tanh_derivative(network[layer][link.toNeuron][0].preSigValue))
+                                errorList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
+                                delC_delA*=network[layer-1][link.fromNeuron][0].value
                                 updateList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
                 #calculate gradient for bias
                 for neuron_Group in network[layer]:
@@ -264,10 +265,14 @@ while i < ids:
         labels[i] = 0
         i+=1
 i = 0
-growth_Factor = 2           
+
+
+
+growth_Factor = 2        
 isUpdate = False
 
 updateList = copy.deepcopy(network)
+errorList = copy.deepcopy(network)
 plt.ion()
 
 # LOAD DATA
@@ -287,8 +292,8 @@ plt.ion()
 
 
 (x_preprocessed, y_preprocessed), (x_test_preprocessed, y_test_preprocessed) = keras.datasets.mnist.load_data()
-x_preprocessed = x_preprocessed[:5000]
-y_preprocessed = y_preprocessed[:5000]
+x_preprocessed = x_preprocessed[:10000]
+y_preprocessed = y_preprocessed[:10000]
 x_train = []
 x = 0
 #PROCESS DATA
