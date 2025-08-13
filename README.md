@@ -19,15 +19,16 @@ Here is a chart detailing some of the trials I did and the accuracy. All were ru
 
 |Structure|Hidden Activation|Final Layer Activation|growth factor|gf shrinking|initialization|Accuracy|
 |---------|-----------------|----------------------|--------|-|-|-|
+|784, 10, 10|ReLU|sigmoid|0.5|no|random|0.3246|
 |784, 10, 10|tanh|sigmoid|10|no|random|0.4421|
 |784, 24, 24, 10|tanh|sigmoid|2|no|random|0.5571
-|784, 10, 10|ReLU|sigmoid|0.5|no|random|0.3246|
-|784, 24, 24, 10|ReLU|sigmoid|0.3|no|He|0.6397|
 |784, 16, 16, 10|ReLU|sigmoid|0.3|no|He|0.6224|
+|784, 24, 24, 10|ReLU|sigmoid|0.3|no|He|0.6397|
 |784, 24, 10|ReLU|sigmoid|1|no|He|0.6863|
+|784, 24, 10|ReLU|sigmoid|0.6|no|He|0.688|
 |784, 24, 10|ReLU|sigmoid|0.3|no|He|0.696|
 
-
+The last three models all peaked at around 72 percent accuracy on the training cases.
 
 
 Theres stil work to be done, so I'm going to implement softmax at the last layer instead of sigmoid.
