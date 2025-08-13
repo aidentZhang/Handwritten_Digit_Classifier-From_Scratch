@@ -21,7 +21,8 @@ Here is a chart detailing some of the trials I did and the accuracy. All were ru
 |---------|-----------------|----------------------|--------|-|-|-|-|
 |784, 10, 10|ReLU|sigmoid|0.5|no|random|7000|0.3246|
 |784, 10, 10|tanh|sigmoid|10|no|random|7000|0.4421|
-|784, 24, 24, 10|tanh|sigmoid|2|no|random|7000|0.5571
+|784, 24, 24, 10|tanh|sigmoid|2|no|random|7000|0.5571|
+|784, 10, 10|ReLU|sigmoid|0.5|no|He|15000|0.5957|
 |784, 16, 16, 10|ReLU|sigmoid|0.3|no|He|7000|0.6224|
 |784, 24, 24, 10|ReLU|sigmoid|0.3|no|He|7000|0.6397|
 |784, 24, 10|ReLU|sigmoid|1|no|He|7000|0.6863|
@@ -31,4 +32,8 @@ Here is a chart detailing some of the trials I did and the accuracy. All were ru
 |784, 10, 10|ReLU|sigmoid|0.4|no|He|15000|0.7628|
 |784, 24, 10|ReLU|sigmoid|0.3|no|He|15000|0.7709|
 
-The factor that had the most impact on training was adding more training examples. However, implementing He initialization was also extremely important. One conclusion that can be taken is that the amount of nodes and layers does not matter too much. At most, it yielded a 1.7 percent improvement, meaning that those having trouble with their simple neural networks should concentrate on their initailzation and quantity of data.
+The factor that had the most impact on training was adding more training examples. However, implementing He initialization was also extremely important. One conclusion that can be taken is that the amount of nodes and layers does not matter too much. At most, it yielded a 1.7 percent improvement, meaning that those having trouble with their simple neural networks should concentrate on their initailzation and quantity of data. Growth rate mattered a lot as well. The shift from 0.5 to 0.3 resulted in a performance increase of around 17.5 percent.
+
+
+
+If anyone is curious about modifying this program, line 203 controls the structure of the network, 223 and 224 control the amount of nodes visible on the first layer of the visualizer (since I didn't want to have 800 ish nodes on my screen in a vertical line), 273 controls the growth factor, and 274 controls whether or not to turn on the visualizer. Line 451 is the growth factor shrinking line.
