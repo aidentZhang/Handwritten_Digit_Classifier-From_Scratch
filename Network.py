@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import random
 import time
 import numpy as np
+from numpy.random import randn
 import keras
 import copy
 import math
@@ -60,11 +61,11 @@ def networkListDiv(l1, x):
                 first+=1
         return l1
 
-def tanh(x):
-        return math.tanh(x)
+def relu(x):
+        return max(0,x)
 
-def tanh_derivative(x):
-        return 1-tanh(x)**2
+def relu_derivative(x):
+        return 1 if x >= 0 else 0
 def sigmoid(x):
         try:
                 return 1/(1+ math.exp(-x))
@@ -122,9 +123,9 @@ def forwardPropagate(LayerValues, layer, network, labels):
         i=0
         while i < len(temp):
                 #CHECK THIS LINE
-                network[layer+1][i][0].value = tanh(temp[i]) if layer != num_layers - 2 else sigmoid(temp[i])
+                network[layer+1][i][0].value = relu(temp[i]) if layer != num_layers - 2 else sigmoid(temp[i])
                 network[layer+1][i][0].preSigValue = temp[i]
-                temp[i] = tanh(temp[i]) if layer != num_layers - 2 else sigmoid(temp[i])
+                temp[i] = relu(temp[i]) if layer != num_layers - 2 else sigmoid(temp[i])
                 labels[neuronsSoFar+i] = round(temp[i], 2)
                 i+=1
         updateGraph()
@@ -166,7 +167,7 @@ def find_Gradient(layer, updateList, expected_outcomes):
 #rolled back                            
                                         delC_delA+=errorList[layer][link.toNeuron][1][i]*network[layer][link.toNeuron][1][i].weight
                                         i+=1
-                                delC_delA*=(tanh_derivative(network[layer][link.toNeuron][0].preSigValue))
+                                delC_delA*=(relu_derivative(network[layer][link.toNeuron][0].preSigValue))
                                 errorList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
                                 delC_delA*=network[layer-1][link.fromNeuron][0].value
                                 updateList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
@@ -199,8 +200,9 @@ def updateNetwork(network, updateList):
 
 
 #INITIALIZE NETWORK STRUCT
-num_layers = 4
-nodesPerLayer = [784, 24, 24, 10]
+nodesPerLayer = [784, 16,10]
+num_layers = len(nodesPerLayer)
+
 network = []
 
 i = 0
@@ -252,7 +254,7 @@ while i < num_layers-1:
                 temp = []         
 
                 for next in network[i+1]:
-                        temp.append(connection(random.random()*2 - 1, i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
+                        temp.append(connection(randn()*(math.sqrt(2/nodesPerLayer[i])), i, curr[0].neuron, next[0].neuron, curr[0].id, next[0].id))
                         G.add_edge(curr[0].id, next[0].id)
                 network[i][curr[0].neuron].append(temp)
         i+=1
@@ -268,7 +270,7 @@ i = 0
 
 
 
-growth_Factor = 2        
+growth_Factor = 0.3 
 isUpdate = False
 
 updateList = copy.deepcopy(network)
@@ -292,8 +294,8 @@ plt.ion()
 
 
 (x_preprocessed, y_preprocessed), (x_test_preprocessed, y_test_preprocessed) = keras.datasets.mnist.load_data()
-x_preprocessed = x_preprocessed[:10000]
-y_preprocessed = y_preprocessed[:10000]
+x_preprocessed = x_preprocessed[:7000]
+y_preprocessed = y_preprocessed[:7000]
 x_train = []
 x = 0
 #PROCESS DATA
