@@ -200,7 +200,7 @@ def updateNetwork(network, updateList):
 
 
 #INITIALIZE NETWORK STRUCT
-nodesPerLayer = [784, 16,10]
+nodesPerLayer = [784, 24,10]
 num_layers = len(nodesPerLayer)
 
 network = []
