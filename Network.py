@@ -10,11 +10,11 @@ import math
 
 # neuron numbering starts at 0, layer numbering starts at 0, id starts at 0
 class node:
-        def __init__(self, layer, neuron, value, id, bias, preSigValue):
+        def __init__(self, layer, neuron, value, id, bias, preFunctionValue):
                 self.layer = layer
                 self.neuron = neuron
                 self.value = value
-                self.preSigValue = preSigValue
+                self.preFunctionValue = preFunctionValue
                 self.id = id
                 #bias is the bias added onto the connection going to it. First layer has no bias
                 self.bias = bias
@@ -61,6 +61,19 @@ def networkListDiv(l1, x):
                 first+=1
         return l1
 
+def softmax(x):
+        sum = 0
+        for i in x:
+                sum+=math.exp(i)
+        temp = []
+        for i in x:
+                temp.append(math.exp(i)/sum)
+        if max(temp) > 1:
+                print(temp)
+                print(x)
+                input()
+        return temp
+
 def relu(x):
         return max(0,x)
 
@@ -87,8 +100,6 @@ def updateGraph():
 
 #LAYERS START FROM ZERO, pass in a list of the first layer of neurons in form [[neuron, [connection, connection]], [neuron...]]
 def forwardPropagate(LayerValues, layer, network, labels):
-        
-
         if layer == 0:
                 i=0
                 while i < len(LayerValues):
@@ -102,6 +113,7 @@ def forwardPropagate(LayerValues, layer, network, labels):
                         n+=1
                 updateGraph()
         if layer == num_layers-1:
+
                 return LayerValues, network
         temp = []
         i = 0
@@ -121,15 +133,17 @@ def forwardPropagate(LayerValues, layer, network, labels):
                 neuronsSoFar+=nodesPerLayer[i]
                 i+=1
         i=0
+        softmaxxed = softmax(temp)
+
         while i < len(temp):
-                #CHECK THIS LINE
-                network[layer+1][i][0].value = relu(temp[i]) if layer != num_layers - 2 else sigmoid(temp[i])
-                network[layer+1][i][0].preSigValue = temp[i]
-                temp[i] = relu(temp[i]) if layer != num_layers - 2 else sigmoid(temp[i])
-                labels[neuronsSoFar+i] = round(temp[i], 2)
+                network[layer+1][i][0].preFunctionValue = temp[i]
+
+                network[layer+1][i][0].value = relu(temp[i]) if layer != num_layers - 2 else softmaxxed[i]
+                temp[i] = relu(temp[i])
+                labels[neuronsSoFar+i] = round(temp[i] if layer !=num_layers-2 else softmaxxed[i], 2)
                 i+=1
         updateGraph()
-        return forwardPropagate(temp, layer+1, network, labels)
+        return forwardPropagate(temp if layer != num_layers-2 else softmaxxed, layer+1, network, labels)
 
 
 
@@ -144,18 +158,18 @@ def find_Gradient(layer, updateList, expected_outcomes):
                 #calculate gradient for weights first
                 for neuron_Group in network[layer-1]:
                         for link in neuron_Group[1]:
-                                current_PreSigVal = network[layer][link.toNeuron][0].preSigValue
+                                current_preFunctionVal = network[layer][link.toNeuron][0].preFunctionValue
         #CROSS ENTROPY DERIVATIVE
-                                errorList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))
-                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_PreSigVal)-expected_outcomes[link.toNeuron]))*neuron_Group[0].value
+                                errorList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_preFunctionVal)-expected_outcomes[link.toNeuron]))
+                                updateList[layer-1][link.fromNeuron][1][link.toNeuron] = ((sigmoid(current_preFunctionVal)-expected_outcomes[link.toNeuron]))*neuron_Group[0].value
                 #calculate gradient for bias
                 for neuron_Group in network[layer]:
 #MADE CHANGE HERE
-                        current_PreSigVal = neuron_Group[0].preSigValue
-                        updateList[layer][neuron_Group[0].neuron][0] = (sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])
+                        current_preFunctionVal = neuron_Group[0].preFunctionValue
+                        updateList[layer][neuron_Group[0].neuron][0] = (sigmoid(current_preFunctionVal)-expected_outcomes[neuron_Group[0].neuron])
 
                         #bottom line is the MSE loss derivative thing
-                        #updateList[layer][neuron_Group[0].neuron][0] = 2*(sigmoid(current_PreSigVal)-expected_outcomes[neuron_Group[0].neuron])*sigmoid_Derivative(current_PreSigVal)
+                        #updateList[layer][neuron_Group[0].neuron][0] = 2*(sigmoid(current_preFunctionVal)-expected_outcomes[neuron_Group[0].neuron])*sigmoid_Derivative(current_preFunctionVal)
         #Processing for cases in between first and last layer REMEBER THAT EACH NEURON INFLUENCES COST THROUGH MULTIPLE PATHS
         else:
                 for neuron_Group in network[layer-1]:
@@ -165,9 +179,12 @@ def find_Gradient(layer, updateList, expected_outcomes):
                                 while i < len(updateList[layer][link.toNeuron][1]):
                                         #delC_delA+=updateList[layer][link.toNeuron][1][i]*network[layer][link.toNeuron][1][i].weight
 #rolled back                            
-                                        delC_delA+=errorList[layer][link.toNeuron][1][i]*network[layer][link.toNeuron][1][i].weight
+                                        adding = errorList[layer][link.toNeuron][1][i]*network[layer][link.toNeuron][1][i].weight
+                                        if layer != num_layers-2:
+                                                adding*=relu_derivative(errorList[layer][link.toNeuron][1][i])
+                                        delC_delA+=adding
                                         i+=1
-                                delC_delA*=(relu_derivative(network[layer][link.toNeuron][0].preSigValue))
+                                delC_delA*=(relu_derivative(network[layer][link.toNeuron][0].preFunctionValue))
                                 errorList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
                                 delC_delA*=network[layer-1][link.fromNeuron][0].value
                                 updateList[layer-1][link.fromNeuron][1][link.toNeuron] = delC_delA
@@ -200,7 +217,7 @@ def updateNetwork(network, updateList):
 
 
 #INITIALIZE NETWORK STRUCT
-nodesPerLayer = [784, 24,10]
+nodesPerLayer = [784, 24, 10]
 num_layers = len(nodesPerLayer)
 
 network = []
@@ -270,7 +287,7 @@ i = 0
 
 
 
-growth_Factor = 0.3 
+growth_Factor = 0.3
 isUpdate = False
 
 updateList = copy.deepcopy(network)
@@ -294,8 +311,8 @@ plt.ion()
 
 
 (x_preprocessed, y_preprocessed), (x_test_preprocessed, y_test_preprocessed) = keras.datasets.mnist.load_data()
-x_preprocessed = x_preprocessed[:7000]
-y_preprocessed = y_preprocessed[:7000]
+x_preprocessed = x_preprocessed[:15000]
+y_preprocessed = y_preprocessed[:15000]
 x_train = []
 x = 0
 #PROCESS DATA
@@ -353,7 +370,6 @@ from tqdm import tqdm
 
 #TRAIN
 totalEpoches = 5
-
 
 
 o = 0
@@ -448,7 +464,7 @@ while o < totalEpoches:
                 i+=1
                 #Growth factor shrinking
         print(f"Correct proportion is {correct/100}")
-        #growth_Factor * (o/(o+1))
+        growth_Factor * (o/(o+1))
                 
         print("Epoch done")
         o+=1
@@ -458,7 +474,7 @@ i = 0
 correct = 0
 while i < len(x_test):
         answer, network = forwardPropagate(x_test[i], 0, network, labels)
-        print(f"expected {y_test[i]} got {answer}")
+        #print(f"expected {y_test[i]} got {answer}")
         if y_test[i].index(1) == answer.index(max(answer)):
                 correct+=1
         i+=1
